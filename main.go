@@ -71,8 +71,8 @@ func saveHtml(savePath string, nameFile string, htmlDocument string) error {
 
 // чтение флагов
 func readFlugs() (*string, *string, error) {
-	pathLinks := flag.String("src", "", "path txt file")
-	pathDirectory := flag.String("dst", "", "path txt file")
+	pathLinks := flag.String("src", "", "Путь на файл с ссылками")
+	pathDirectory := flag.String("dst", "", "Путь для сохранения html документов")
 
 	flag.Parse()
 
