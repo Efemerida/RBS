@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -21,39 +22,13 @@ func main() {
 	}
 
 	fmt.Println("Запуск")
-	var strings = readLinks(params[0])
-	err := connect(strings, params[1])
+	err := readLinks(params[0], params[1])
 	if err != nil {
 		return
 	}
 	endTime := time.Now()
 
 	fmt.Printf("Время работы программы: %s\n", endTime.Sub(beginTime))
-
-}
-
-func connect(links []string, savePath string) error {
-	for _, s := range links {
-		fmt.Printf("%s: ", s)
-		url := fmt.Sprintf("https://%s", s)
-
-		response, err := http.Get(url)
-		if err != nil {
-			fmt.Printf("ошибка запроса\n")
-			continue
-		}
-
-		defer response.Body.Close()
-
-		doc, _ := io.ReadAll(response.Body)
-		err = saveHtml(savePath, s, string(doc))
-		if err != nil {
-			return errors.New("can't save html file")
-		}
-		fmt.Printf("успешно\n")
-
-	}
-	return nil
 
 }
 
@@ -92,7 +67,7 @@ func readFlugs() []string {
 	return result
 }
 
-func readLinks(path string) []string {
+func readLinks(path string, savePath string) error {
 	file, err := os.Open(path)
 	if err != nil {
 		fmt.Printf("Неудалось считать файл")
@@ -101,16 +76,34 @@ func readLinks(path string) []string {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	var links []string
-
+	var wg sync.WaitGroup
 	for scanner.Scan() {
 		lineStr := scanner.Text()
 		lineStr = strings.TrimSpace(lineStr)
 		if lineStr != "" {
-			links = append(links, lineStr)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				url := fmt.Sprintf("https://%s", lineStr)
+				response, err := http.Get(url)
+				if err != nil {
+					fmt.Printf("%s: ошибка запроса\n", lineStr)
+					return
+				}
+
+				defer response.Body.Close()
+
+				doc, _ := io.ReadAll(response.Body)
+				err = saveHtml(savePath, lineStr, string(doc))
+				if err != nil {
+					panic("can't save html file")
+				}
+				fmt.Printf("%s: успешно\n", lineStr)
+			}()
+
 		}
 	}
 
-	return links
-
+	wg.Wait()
+	return nil
 }
