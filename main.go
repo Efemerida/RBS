@@ -38,7 +38,7 @@ func main() {
 
 }
 
-// сохранение html документа
+// saveHtml - сохранение html документа
 func saveHtml(savePath string, nameFile string, htmlDocument string) error {
 
 	//формирования пути сохранения
@@ -69,7 +69,7 @@ func saveHtml(savePath string, nameFile string, htmlDocument string) error {
 	return nil
 }
 
-// чтение флагов
+// readFlugs - чтение флагов
 func readFlugs() (*string, *string, error) {
 	pathLinks := flag.String("src", "", "Путь на файл с ссылками")
 	pathDirectory := flag.String("dst", "", "Путь для сохранения html документов")
@@ -78,6 +78,7 @@ func readFlugs() (*string, *string, error) {
 
 	//если флаг на файл с ссылками не установлен
 	if *pathLinks == "" {
+		flag.PrintDefaults()
 		return nil, nil, errors.New("не указан файл, содержащий ссылки")
 	}
 
@@ -90,7 +91,7 @@ func readFlugs() (*string, *string, error) {
 	return pathLinks, pathDirectory, nil
 }
 
-// чтение ссылок из файла, получение по ним html документа и запись его в файл
+// readLinksGetAndSaveHtml - чтение ссылок из файла, получение по ним html документа и запись его в файл
 func readLinksGetAndSaveHtml(pathInputFile string, savePath string) error {
 
 	//открытие файла с ссылками
@@ -104,6 +105,7 @@ func readLinksGetAndSaveHtml(pathInputFile string, savePath string) error {
 	var wg sync.WaitGroup
 
 	//чтение из файла
+	var countlinks map[string]bool = map[string]bool{}
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 
@@ -113,6 +115,11 @@ func readLinksGetAndSaveHtml(pathInputFile string, savePath string) error {
 		//если не пустая строка в качестве ссылки,
 		//то выполнение запроса и сохранение html документа
 		if link != "" {
+
+			if _, ok := countlinks[link]; ok {
+				continue
+			}
+			countlinks[link] = true
 			wg.Add(1)
 			go getAndSaveHtmlFromLink(link, savePath, &wg)
 		}
@@ -122,7 +129,7 @@ func readLinksGetAndSaveHtml(pathInputFile string, savePath string) error {
 	return nil
 }
 
-// получение и сохранение html по ссылке
+// getAndSaveHtmlFromLink - получение и сохранение html по ссылке
 func getAndSaveHtmlFromLink(link string, savePath string, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 
